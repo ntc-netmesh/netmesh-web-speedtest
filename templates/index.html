@@ -1,0 +1,31 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <title>Netmesh Web Speedtest</title>
+    <script src="//code.jquery.com/jquery-1.12.4.min.js" integrity="sha256-ZosEbRLbNQzLpnKIkEdrPv7lOy9C27hHQ+Xp8a4MxAQ="
+            crossorigin="anonymous"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js"
+            integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I=" crossorigin="anonymous"></script>
+    <script src="/static/js/test.js">
+    </script>
+</head>
+<body>
+<h1>Netmesh Web Speedtest</h1>
+<br>
+<h2>Test:</h2>
+<form id="emit" method="POST" action='#'>
+    <input type="submit" id="speedtest-button" value="Start">
+    <span id="reload-msg"> </span>
+</form>
+
+<h2>Results:</h2>
+<div>
+    <p>Ping: <b><span id="rtt"></span></b></p>
+    <p>Download: <b><span id="dl"></span></b></p>
+    <p>Upload: <b><span id="ul"></span></b></p>
+</div>
+
+<h2>Log:</h2>
+<div id="log"></div>
+</body>
+</html>
