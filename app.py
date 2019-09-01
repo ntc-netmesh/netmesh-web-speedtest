@@ -6,6 +6,8 @@ from os import urandom
 from threading import Lock
 import requests
 import json
+import hashlib
+from math import ceil
 
 from flask import Flask, render_template, request
 from flask_socketio import SocketIO, Namespace, emit, disconnect
@@ -21,15 +23,13 @@ socketio = SocketIO(app, async_mode=async_mode)
 
 thread = None
 thread_lock = Lock()
-size = 1024 * 1024 * 5
-dummy_bytes = urandom(size)
-dummy_data_size = sys.getsizeof(dummy_bytes)  # apparently, sizeof(dummy_bytes) is not exactly equal to size
 
 
 db = {}  # TODO: do we need this to be on a real database?
 
 def remove_sid(sid):
     db.pop(sid, None)
+
 
 
 def submit(request, result):
@@ -60,37 +60,61 @@ def submit(request, result):
     return
 
 
-def calculate(sid):
-    # sort time deltas, and drop 2 lowest and 2 highest values
-    pingTimes = db[sid]['pingTimes']
-    ulTimes = db[sid]['ulTimes']
+def drop_outliers(myList):
+    """ Drops top 10% highest and bottom 10% values in the list"""
+    origLen = len(myList)
+    dropValue = ceil(origLen * 0.10)
+    myList.sort()
+    return myList[dropValue:(origLen - dropValue)]
+
+
+def get_dl_speed(sid):
     dlTimes = db[sid]['dlTimes']
-    pingTimes.sort()
-    ulTimes.sort()
-    dlTimes.sort()
+    # dlTimes = drop_outliers(dlTimes)
+    dlTimesAve = sum(dlTimes) / len(dlTimes)
+    dlSpeed = db[sid]['settings']['dlSize'] / (dlTimesAve - db[sid]['oneWayTime'])
+    return dlSpeed
 
-    pingTimes = pingTimes[2:8]
-    ulTimes = ulTimes[2:8]
-    dlTimes = dlTimes[2:8]
 
-    # get average of the remaing deltas
-    pingDelta = sum(pingTimes)/len(pingTimes)
-    ulDelta = sum(ulTimes)/len(ulTimes)
-    dlDelta = sum(dlTimes)/len(dlTimes)
+def get_ul_speed(sid):
+    ulTimes = db[sid]['ulTimes']
+    # ulTimes = drop_outliers(ulTimes)
+    ulTimesAve = sum(ulTimes) / len(ulTimes)
+    ulSpeed = db[sid]['settings']['ulSize'] / (ulTimesAve - db[sid]['oneWayTime'])
+    return ulSpeed
 
-    # get speed simply by using file size divided by the average time
-    # ul = round(dummy_data_size / ulDelta / (1024 * 1024), 2)
-    # dl = round(dummy_data_size / dlDelta / (1024 * 1024), 2)
-    ul = dummy_data_size / ulDelta
-    dl = dummy_data_size / dlDelta
-    rtt = pingDelta * 1000
-    result = {
-        'sid': sid,
-        'ul': ul,
-        'dl': dl,
-        'rtt': rtt
+
+def get_rtt(pingTimes):
+    # pingTimes = drop_outliers(pingTimes)
+    pingAve = sum(pingTimes) / len(pingTimes)
+    return pingAve
+
+
+def get_time_PING_stop(socketID):
+    timeNOW = time.time()
+    sid = socketID.split("#")[1]
+    db[sid]['pingTimes'].append(timeNOW - db[sid]['pingStart'])
+
+
+def get_time_DL_stop(socketID):
+    timeNOW = time.time()
+    sid = socketID.split("#")[1]
+    db[sid]['dlTimes'].append(timeNOW - db[sid]['dlStart'])
+
+
+def get_time_UL_start(socketID):
+    timeNOW = time.time()
+    sid = socketID.split("#")[1]
+    db[sid]['ulStart'] = timeNOW
+
+
+def emit_result(sid):
+    msg = {
+        'log': 'Partial Results sent',
+        'results': db[sid]['result'],
+        'state': 100
     }
-    return result
+    emit('my_response', msg)
 
 
 @app.route('/')
@@ -99,130 +123,192 @@ def index():
 
 
 class MyNamespace(Namespace):
+
+
     def on_next(self, message):
+        time_now = time.time()
         state = message["state"]
         if state == 0:
-            self.on_my_ping_1()
+            self.ping_start()
         elif state == 1:
-            self.on_my_ping_2()
+            self.ping_end()
         elif state == 2:
-            self.on_my_dl_1()
+            self.start_DL()
         elif state == 3:
-            self.on_my_dl_2()
+            self.verify_DL(message)
         elif state == 4:
-            self.on_my_ul_1(message)
+            self.trigger_UL()
         elif state == 5:
-            self.on_my_ul_2()
-        else: # catch bin for failures
+            self.received_UL(message, time_now)
+        else:  # catch bin for failures
             pass
+
+    def on_connect(self):
+        msg = {
+            'log': 'Connected',
+            'state': None,
+        }
+        emit('my_response', msg)
 
     def on_disconnect_request(self):
         emit('my_response', {'log': 'Test done... Disconnected!'})
         disconnect()
 
-    def on_connect(self):
-        emit('my_response', {'log': 'Connected'})
-
-    def on_start(self):
-        db[request.sid] = {
-            'ip_address': request.remote_addr,
-            'testCount': 0,
-            'pingStart': 0,
-            'pingStop': 0,
-            'dlStart': 0,
-            'dlStop': 0,
-            'ulStart': 0,
-            'ulStop': 0,
-            'pingTimes': [],
-            'dlTimes': [],
-            'ulTimes': []
-        }
-        print(db)
-        emit('my_response', {'log': 'Starting', 'state': 0})
-
-    def on_my_ping_1(self):
-        db[request.sid]['pingStart'] = time.time()
-        msg = {
-            'state': 1,
-            'log': 'Ping sent',
-        }
-        emit('my_response', msg)
-
-    def on_my_ping_2(self):
-        db[request.sid]['pingStop'] = time.time()
-        db[request.sid]['pingTimes'].append(db[request.sid]['pingStop'] - db[request.sid]['pingStart'])
-        msg = {
-            'state': 2,
-            'log': 'Ping ACK sent',
-        }
-        emit('my_response', msg)
 
     def on_disconnect(self):
         print(db)
         remove_sid(request.sid)
         print('Client disconnected %s', request.sid)
 
-    def on_my_dl_1(self):
-        db[request.sid]['dlStart'] = time.time()
+    def on_start(self, message):
+        db[request.sid] = {
+            'settings': message['settings'],
+            'ip_address': request.remote_addr,
+            'testCount': 0,
+            'pingStart': 0,
+            'dlStart': 0,
+            'ulStart': 0,
+            'pingTimes': [],
+            'dlTimes': [],
+            'ulTimes': [],
+            'oneWayTime': 0,
+            'digest': b'0',
+            'result': {
+                'ul': 0,
+                'dl': 0,
+                'rtt': 0
+            }
+        }
+        msg = {
+            'log': 'Starting',
+            'state': 0,
+        }
+        emit('my_response', msg)
+
+    def ping_start(self):  # Starting ping test
+        msg = {
+            'state': 1,
+            'log': 'Ping sent',
+        }
+        db[request.sid]['pingStart'] = time.time()
+        emit('my_response', msg, callback=get_time_PING_stop)
+
+    def ping_end(self):
+
+        # check if we repeat ping test
+        if db[request.sid]['testCount'] < db[request.sid]['settings']['pingTestCount']:
+            db[request.sid]['testCount'] += 1
+            self.ping_start()
+
+        # or proceed to next test
+        else:
+            # send result first
+            db[request.sid]['result']['rtt'] = get_rtt(db[request.sid]['pingTimes'])
+            db[request.sid]['oneWayTime'] = db[request.sid]['result']['rtt'] / 2
+            msg = {
+                'log': 'Partial Results sent',
+                'results': db[request.sid]['result'],
+                'state': 100
+            }
+            emit('my_response', msg)
+
+            db[request.sid]['testCount'] = 0
+            self.start_DL()
+
+    def start_DL(self):  # start DL test
+
+        # prepare payload and digest
+        challenge = urandom(db[request.sid]['settings']['dlSize'])
+        db[request.sid]['digest'] = hashlib.sha512(challenge).hexdigest()
+
         msg = {
             'state': 3,
             'log': 'currently on state DL_1',
-            'bin': dummy_bytes,
-            'binsize': dummy_data_size,
+            'bin': challenge,
         }
-        emit('my_response', msg)
+        db[request.sid]['dlStart'] = time.time()
+        emit('my_response', msg, callback=get_time_DL_stop)
 
-    def on_my_dl_2(self):
-        db[request.sid]['dlStop'] = time.time()
-        db[request.sid]['dlTimes'].append(db[request.sid]['dlStop'] - db[request.sid]['dlStart'])
-        msg = {
-            'state': 4,
-            'log': 'currently on state DL_2, DL done',
-        }
-        emit('my_response', msg)
-        db[request.sid]['ulStart'] = time.time()
+    def verify_DL(self, message):
 
-    def on_my_ul_1(self, message):
-        recvBinData = message['bin']
-        if sys.getsizeof(recvBinData) == dummy_data_size:
-            print('Server log: uploaded data for %s OK' % request.sid)
+        # check if hash is correct
+        # If client failed to give correct hash, server triggers disconnect
+        if message['hash'] != db[request.sid]['digest']:
             msg = {
-                'state': 5,
-                'log': 'currently on state UL-1',
+                'state': -99,
+                'log': 'Hash values not equal',
             }
             emit('my_response', msg)
-            db[request.sid]['ulStop'] = time.time()
-            db[request.sid]['ulTimes'].append(db[request.sid]['ulStop'] - db[request.sid]['ulStart'])
+            self.on_disconnect_request()
+
+        #  Client computed hash correctly so let's proceed to next state
         else:
+            #  send intermediate results
+            db[request.sid]['result']['dl'] = get_dl_speed(request.sid)
+            emit_result(request.sid)
+
+            # check if we repeat test again
+            if db[request.sid]['testCount'] < db[request.sid]['settings']['dlTestCount']:
+                db[request.sid]['testCount'] += 1
+                self.start_DL()
+            else:
+                db[request.sid]['testCount'] = 0
+                self.transition_UL()
+
+    def transition_UL(self):
+        # prepare payload that will be used for UL test
+        ulPayload = urandom(db[request.sid]['settings']['ulSize'])
+        db[request.sid]['digest'] = hashlib.sha512(ulPayload).hexdigest()
+        msg = {
+            'state': 4,
+            'log': 'Upload Start!',
+            'bin': ulPayload
+        }
+        emit('my_response', msg)
+
+    def trigger_UL(self):
+        msg = {
+            'state': 5,
+            'log': 'Upload Start!',
+        }
+        emit('my_response', msg, callback=get_time_UL_start)
+
+    def received_UL(self, message, clockStopped):
+        db[request.sid]['ulTimes'].append(clockStopped - db[request.sid]['ulStart'])
+        recvBinData = message['bin']
+
+        # validate payload
+        if db[request.sid]['digest'] != hashlib.sha512(recvBinData).hexdigest():
             msg = {
                 'state': -99,
                 'log': 'Upload Failed!',
             }
             emit('my_response', msg)
+            self.on_disconnect_request()
 
-    def on_my_ul_2(self):
-        if db[request.sid]['testCount'] < 10:
-            db[request.sid]['testCount'] += 1
-            msg = {
-                'state': 0,
-                'log': 'Run another test',
-            }
-            emit('my_response', msg)
         else:
-            db[request.sid]['testCount'] = 0  # reset counter
-            self.on_my_results()
+            # send intermediate results
+            db[request.sid]['result']['ul'] = get_ul_speed(request.sid)
+            emit_result(request.sid)
 
-        print('Server log: testcount[%s] = %s' % (request.sid, db[request.sid]['testCount']))
+            # check if we still need to do another round
+            if db[request.sid]['testCount'] < db[request.sid]['settings']['ulTestCount']:
+                print('we received OK payload')
+                db[request.sid]['testCount'] += 1
+                self.transition_UL()
 
-    def on_my_results(self):
-        results = calculate(request.sid)
+            else:
+                db[request.sid]['testCount'] = 0
+                self.on_complete()
+
+    def on_complete(self):
         msg = {
-            'log': 'Results sent',
-            'results': results,
-            'state': 100
+            'log': 'Test Completed!',
+            'state': 101
         }
         emit('my_response', msg)
-        submit(request, results)  # ToDO: handle when connection takes too long or RS is unreachable?
+        print(db)
+        # submit(request, results)  # ToDO: handle when connection takes too long or RS is unreachable?
 
     def on_error(self):
         print(request.event["message"])
