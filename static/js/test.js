@@ -3,8 +3,8 @@ function myLog(msg){
 }
 
 function displayResults(msg){
-    ul = msg.results.ul / (1024*1024);      // TODO: add a switch for units
-    dl = msg.results.dl / (1024*1024);
+    ul = (msg.results.ul*8) / (1024*1024);  //convert bytes to bits    // TODO: add a switch for units
+    dl = (msg.results.dl*8) / (1024*1024);
     rttAve = msg.results.rttAve * 1000;
     rttMin = msg.results.rttMin * 1000;
     rttMax = msg.results.rttMax * 1000;
