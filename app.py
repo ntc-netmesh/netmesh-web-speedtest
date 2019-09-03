@@ -15,7 +15,7 @@ from flask_socketio import SocketIO, Namespace, emit, disconnect
 # Set this variable to "threading", "eventlet" or "gevent" to test the
 # different async modes, or leave it set to None for the application to choose
 # the best option based on installed packages.
-async_mode = None
+async_mode = 'gevent'
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
@@ -24,12 +24,11 @@ socketio = SocketIO(app, async_mode=async_mode)
 thread = None
 thread_lock = Lock()
 
-
 db = {}  # TODO: do we need this to be on a real database?
+
 
 def remove_sid(sid):
     db.pop(sid, None)
-
 
 
 def submit(request, result):
@@ -87,7 +86,9 @@ def get_ul_speed(sid):
 def get_rtt(pingTimes):
     # pingTimes = drop_outliers(pingTimes)
     pingAve = sum(pingTimes) / len(pingTimes)
-    return pingAve
+    pingMin = min(pingTimes)
+    pingMax = max(pingTimes)
+    return [pingAve, pingMin, pingMax]
 
 
 def get_time_PING_stop(socketID):
@@ -124,29 +125,30 @@ def index():
 
 class MyNamespace(Namespace):
 
-
     def on_next(self, message):
         time_now = time.time()
         state = message["state"]
-        if state == 0:
+        if state == 1:
             self.ping_start()
-        elif state == 1:
-            self.ping_end()
         elif state == 2:
-            self.start_DL()
+            self.ping_end()
         elif state == 3:
-            self.verify_DL(message)
+            self.start_DL()
         elif state == 4:
-            self.trigger_UL()
+            self.verify_DL(message)
         elif state == 5:
+            self.trigger_UL()
+        elif state == 6:
             self.received_UL(message, time_now)
-        else:  # catch bin for failures
+        elif state == -99:  # catch bin for failures
+            self.on_error()
+        else:
             pass
 
     def on_connect(self):
         msg = {
             'log': 'Connected',
-            'state': None,
+            'state': 0,
         }
         emit('my_response', msg)
 
@@ -154,9 +156,7 @@ class MyNamespace(Namespace):
         emit('my_response', {'log': 'Test done... Disconnected!'})
         disconnect()
 
-
     def on_disconnect(self):
-        print(db)
         remove_sid(request.sid)
         print('Client disconnected %s', request.sid)
 
@@ -176,18 +176,20 @@ class MyNamespace(Namespace):
             'result': {
                 'ul': 0,
                 'dl': 0,
-                'rtt': 0
+                'rttAve': 0,
+                'rttMin': 0,
+                'rttMax': 0,
             }
         }
         msg = {
             'log': 'Starting',
-            'state': 0,
+            'state': 1,
         }
         emit('my_response', msg)
 
     def ping_start(self):  # Starting ping test
         msg = {
-            'state': 1,
+            'state': 2,
             'log': 'Ping sent',
         }
         db[request.sid]['pingStart'] = time.time()
@@ -195,16 +197,17 @@ class MyNamespace(Namespace):
 
     def ping_end(self):
 
-        # check if we repeat ping test
+        # check if we need to repeat ping test ...
         if db[request.sid]['testCount'] < db[request.sid]['settings']['pingTestCount']:
             db[request.sid]['testCount'] += 1
             self.ping_start()
 
-        # or proceed to next test
+        # ... or proceed to next test
         else:
             # send result first
-            db[request.sid]['result']['rtt'] = get_rtt(db[request.sid]['pingTimes'])
-            db[request.sid]['oneWayTime'] = db[request.sid]['result']['rtt'] / 2
+            [db[request.sid]['result']['rttAve'], db[request.sid]['result']['rttMin'],
+             db[request.sid]['result']['rttMax']] = get_rtt(db[request.sid]['pingTimes'])
+            db[request.sid]['oneWayTime'] = db[request.sid]['result']['rttAve'] / 2
             msg = {
                 'log': 'Partial Results sent',
                 'results': db[request.sid]['result'],
@@ -219,10 +222,12 @@ class MyNamespace(Namespace):
 
         # prepare payload and digest
         challenge = urandom(db[request.sid]['settings']['dlSize'])
-        db[request.sid]['digest'] = hashlib.sha512(challenge).hexdigest()
+        last32bytes = challenge[-32:]
+        # db[request.sid]['digest'] = hashlib.sha512(challenge).hexdigest()
+        db[request.sid]['digest'] = last32bytes
 
         msg = {
-            'state': 3,
+            'state': 4,
             'log': 'currently on state DL_1',
             'bin': challenge,
         }
@@ -236,7 +241,7 @@ class MyNamespace(Namespace):
         if message['hash'] != db[request.sid]['digest']:
             msg = {
                 'state': -99,
-                'log': 'Hash values not equal',
+                'log': 'Verification failed!',
             }
             emit('my_response', msg)
             self.on_disconnect_request()
@@ -260,7 +265,7 @@ class MyNamespace(Namespace):
         ulPayload = urandom(db[request.sid]['settings']['ulSize'])
         db[request.sid]['digest'] = hashlib.sha512(ulPayload).hexdigest()
         msg = {
-            'state': 4,
+            'state': 5,
             'log': 'Upload Start!',
             'bin': ulPayload
         }
@@ -268,7 +273,7 @@ class MyNamespace(Namespace):
 
     def trigger_UL(self):
         msg = {
-            'state': 5,
+            'state': 6,
             'log': 'Upload Start!',
         }
         emit('my_response', msg, callback=get_time_UL_start)
@@ -281,7 +286,7 @@ class MyNamespace(Namespace):
         if db[request.sid]['digest'] != hashlib.sha512(recvBinData).hexdigest():
             msg = {
                 'state': -99,
-                'log': 'Upload Failed!',
+                'log': 'Verification failed!',
             }
             emit('my_response', msg)
             self.on_disconnect_request()
@@ -293,7 +298,6 @@ class MyNamespace(Namespace):
 
             # check if we still need to do another round
             if db[request.sid]['testCount'] < db[request.sid]['settings']['ulTestCount']:
-                print('we received OK payload')
                 db[request.sid]['testCount'] += 1
                 self.transition_UL()
 
@@ -313,6 +317,12 @@ class MyNamespace(Namespace):
     def on_error(self):
         print(request.event["message"])
         print(request.event["args"])
+        msg = {
+            'state': -99,
+            'log': 'An unexpected event happened, terminating!',
+        }
+        emit('my_response', msg)
+        self.on_disconnect_request()
 
 
 socketio.on_namespace(MyNamespace('/speedtest'))
