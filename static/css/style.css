@@ -1,0 +1,241 @@
+/*
+	99Lime.com HTML KickStart by Joshua Gatcke
+	style.css
+
+*/
+
+/*---------------------------------
+	IMPORTS
+-----------------------------------*/
+@import url(https://fonts.googleapis.com/css?family=Arimo:400,700);
+
+/*---------------------------------
+	OVERRIDES
+-----------------------------------*/
+h1,h2,h3,h4,h5,h6{
+font-family: "M1m", "Arimo", arial, verdana, sans-serif;
+font-weight:normal;
+color:#efefef;
+}
+
+thead th,
+tbody th{
+font-family: "Arimo", arial, verdana, sans-serif;
+}
+
+button,
+a.btn,
+input[type="submit"],
+input[type="reset"],
+input[type="button"]{
+font-family: "Arimo", arial, verdana, sans-serif;
+}
+
+.menu{
+font-family: "Arimo", arial, verdana, sans-serif;
+}
+
+blockquote{
+font-family: "Arimo", arial, verdana, sans-serif;
+}
+
+/*---------------------------------
+	LAYOUT
+-----------------------------------*/
+body{
+margin:0;
+padding:0 0 0 0;
+color:#000;
+/*background:#efefef;*/
+background:#000;
+font:normal 0.9em/150% 'Arimo', arial, verdana, sans-serif;
+text-shadow: 0 0 1px transparent; /* google font pixelation fix */
+}
+
+#wrap{
+width:100%;
+background:#fff;
+margin:30px auto 30px auto;
+padding:0 2%;
+border:1px solid #ccc;
+}
+
+
+#footer{
+text-align:center;
+padding:20px;
+margin:0;
+border-top:1px solid #ddd;
+color:#999;
+font-size:0.8em;
+text-shadow:0px 1px 1px #fff;
+position: relative;
+top:0;
+left:0;
+background:#000;
+}
+
+	#link-top{
+	display:none;
+	}
+
+/* NAV BAR*/
+.navbar{
+position:fixed;
+top:0;
+left:0;
+width: 100%;
+background:#000;
+color:#fff;
+z-index:1000;
+}
+
+	.navbar #logo{
+	position:absolute;
+	top:0;
+	right:0;
+	padding:0.5em 1em;
+	font-size: 1.7em;
+	color:#efefef;
+	text-decoration:none;
+	}
+
+	.navbar span{
+	color:#86dc00;
+	}
+
+
+	.navbar ul{
+	display:inline-block;
+	margin:0;
+	padding:0;
+	}
+
+		.navbar li{
+		margin:0;
+		padding:0;
+		list-style-type:0;
+		display:inline-block;
+		}
+
+		.navbar li a{
+		display:inline-block;
+		color:#efefef;
+		padding:1em 1.3em;
+		text-decoration:none;
+		text-transform: uppercase;
+		line-height:100%;
+		font-size: 1.2em;
+		}
+
+.callout{
+background:#4598ef;/*#86dc00;*/
+padding:3em 0;
+color:#fff;
+box-shadow:inset 0 0 10px rgba(0,0,0,0.2);
+text-align: center;
+text-shadow:0px 1px 3px rgba(0,0,0,0.2);
+display:block;
+}
+	.callout + div.grid{margin-top:50px;}
+	 a.callout{cursor:pointer;}
+	 .callout i.icon-4x{font-size:6em;}
+	 .callout h4{margin-bottom:30px;}
+	 .callout-top{margin:50px 0 0 0;}
+	 .callout p{margin-bottom:0;}
+	 .callout .button{margin-top:10px;}
+	 .callout.green{background:#19ad0b;/*#86dc00;*/}
+
+#mc_embed_signup{
+padding:30px 0;
+}
+
+#ui-preview{
+border:5px solid #ddd;
+margin:30px 0;
+display:block;
+}
+
+/* 8.28.19 OCL Mod */
+@font-face {
+    font-family: 'MuseoSans_900-webfont';
+    src: url('fonts/MuseoSans_900-webfont.ttf');
+}
+@font-face {
+	font-family: 'M1m';
+	src: url('fonts/mplus-1m-regular-webfont.ttf');
+	font-weight: normal;
+	font-style: normal;
+}
+/* Main canvas stage style */
+#dashboard {
+	/*width: 360px;
+	height: 640px;
+	border: 1px solid rgb(153, 153, 153);*/
+	-webkit-border-radius: 16px 16px 16px 16px;
+	border-radius: 16px 16px 16px 16px;
+	background-color: #000;
+}
+form { 
+	float: left;
+	border: 1px solid #333; 
+	padding: 30px 40px 20px 40px;
+	/*margin: 50px 0 0 140px;*/
+	width: 250px;
+	height: 300px;
+	background: #000;
+
+	/* -- CSS3 - define rounded corners for the form -- */	
+	-webkit-border-radius: 10px;
+	-moz-border-radius: 10px;
+	border-radius: 10px; 		
+
+	/* -- CSS3 - create a background gradient -- 
+	background: -webkit-gradient(linear, 0% 0%, 0% 40%, from(#EEE), to(#FFFFFF)); 
+	background: -moz-linear-gradient(0% 40% 90deg,#FFF, #EEE); */
+
+	/* -- CSS3 - add a drop shadow -- */
+	-webkit-box-shadow:0px 0 50px #333;
+	-moz-box-shadow:0px 0 50px #333; 
+	box-shadow:0px 0 50px #333;		 		
+}
+input, select, textarea { 		
+	padding: 2px; 
+	margin: 2px 5px 10px 0; 
+	background: #fff; 
+	width: 100%; /*200px; */
+	font-size: 16px; 
+	color: #555; 
+	border: 1px #ddd solid;
+
+	font-family: 'M1m', arial, verdana, sans-serif;
+	
+	/* -- CSS3 - define rounded corners for each element -- */	
+	-webkit-border-radius: 4px;
+	-moz-border-radius: 4px;
+	border-radius: 4px; 	
+}
+textarea {		
+	height: 200px; 	
+	resize: none;	 		
+}
+input[type="button"] { 	
+	position: absolute;
+	top: 0;
+	right: 0;
+	width: 30px; 
+	height: 30px;
+	color: #eee; 
+	text-transform: uppercase; 
+	margin-top: 10px;
+	background-color: #000;
+	border: 2px solid #555;
+	font-size: 16px;
+} 
+input[type="button"]:hover { 		
+	-webkit-box-shadow: 0px 0px 20px #555;
+	-moz-box-shadow: 0px 0px 20px #aaa; 
+	box-shadow: 0px 0px 20px #555;	
+	background-color: #ff0000;
+	cursor:  pointer; 
+} 

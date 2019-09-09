@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="format-detection" content="telephone=no">
+        <meta name="msapplication-tap-highlight" content="no">
+        <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width, target-densitydpi=device-dpi">
+        <title>Netmesh Dashboard</title>
+        <meta name="description" content="Dashboard for Netmesh Web Speedtest" />
+        <link rel="stylesheet" href="static/css/style.css" />
+        <link rel="stylesheet" href="static/css/zerogrid.css" />
+
+<!--         The following script calls socket.io; choose one -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js"></script>
+        <!--<script src="scripts/lib/socket.io.js"></script>-->
+<!--        <script src="/socket.io/socket.io.js"></script>   -->
+    </head>
+    <body>
+        <div class="zerogrid">
+			<div class="row">
+				<div class="col-5-5" align='right'>
+				<h1 style="color:#efefef">Netmesh Web Speedtest</h1>
+                <!-- Preload custom font here before use. This is a workaround. -->
+                <span style="font-family:M1m; color:#efefef">Add description here</span>
+                <span style="font-family:MuseoSans_900-webfont">&nbsp</span>
+				<hr>
+				</div>
+			</div>
+            <div class="row">
+                <div class="col-5-5">
+                    <div class="wrap-col">
+                        <canvas id="dashboard" class="col-full" oncontextmenu="return false;" onselectstart="return false;">
+                            Your browser does not appear to support HTML5.  Try upgrading your browser to the latest version.
+                        </canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-5-5">
+                    <div id="footer">
+                        &copy; Copyright 2019 
+                    </div>
+                </div>
+            </div>
+        </div><!-- END GRID -->
+        <div class="clear"></div>
+        <!-- script entry point -->
+        <script src="static/scripts/lib/require.js"></script>
+        <script>require(["static/scripts/init.js"])</script>
+<!--        <script src="static/scripts/init.js"></script>-->
+<!--        <script data-main="static/scripts/init.js" src="static/scripts/lib/require.js"></script>-->
+    </body>
+</html>

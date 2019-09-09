@@ -120,7 +120,7 @@ def emit_result(sid):
 
 @app.route('/')
 def index():
-    return render_template('index.html', async_mode=socketio.async_mode)
+    return render_template('index-pretty.html', async_mode=socketio.async_mode)
 
 
 class MyNamespace(Namespace):
@@ -323,6 +323,9 @@ class MyNamespace(Namespace):
         }
         emit('my_response', msg)
         self.on_disconnect_request()
+
+    def on_servertoclient(self):
+        emit('my_response', {'data': 'connected'})
 
 
 socketio.on_namespace(MyNamespace('/speedtest'))
