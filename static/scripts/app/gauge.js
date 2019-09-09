@@ -12,8 +12,13 @@ const DEG_LEFT_START = 135;			// bottom tick is 16 degrees from vertical
 const DEG_LEFT_END = 262;			// top tick is 8 degrees from vertical
 const DEG_RIGHT_START = 45;			
 const DEG_RIGHT_END = -82;
-const DEF_RANGE = [0,100,20,10];	// min,max,major,minor
+const DEF_RANGE = [0,20,5,2.5];	// min,max,major,minor
 const DEF_EASE = 15;
+const DEF_SCALE = [
+	[0,10,2,1],
+	[0,20,5,2.5],
+	[0,50,10,5]
+];
 
 const DEG_HALF_START = 140;
 const DEG_HALF_END = 250;
@@ -21,6 +26,7 @@ const DEF_LOG = [-1,4,1,0.5];
 
 const DEG_PIE_START = 120;
 const DEG_PIE_END = 60;
+
 
 class DualGauge {
 	constructor(param) {
@@ -75,33 +81,15 @@ class DualGauge {
 	set speed0 (val) {
 		//let v = Math.max(Math.min(val, this.range[1]), this.range[0]);
 		let v = Math.max(val, this.range[0]);
-			while (val > this.range[1]) {
-                this.range[1] += this.range[2];
-            }
-            if (this.range[1]>=200)
-                this.range[2] = Math.max(this.range[2],50);
-            else if (this.range[1]>=100)
-                this.range[2] = Math.max(this.range[2],20);
-            else
-                this.range[2] = Math.max(this.range[2],10);
-                this.range[3] = Math.max(this.range[3], this.range[2]/2);
+		this.autoscale(v);
 
-                this.targetSpeed[0] = (v>10) ? Math.round(v*100)/100 : Math.round(v*1000)/1000;
-                this.easeSpeed[0] = DEF_EASE;
-    }
+		this.targetSpeed[0] = (v>10) ? Math.round(v*100)/100 : Math.round(v*1000)/1000;
+		this.easeSpeed[0] = DEF_EASE;
+	}
 	set speed1 (val) {
 		//let v = Math.max(Math.min(val, this.range[1]), this.range[0]);
 		let v = Math.max(val, this.range[0]);
-		while (val > this.range[1]) {
-this.range[1] += this.range[2];
-}
-if (this.range[1]>=200)
-this.range[2] = Math.max(this.range[2],50);
-else if (this.range[1]>=100)
-this.range[2] = Math.max(this.range[2],20);
-else
-this.range[2] = Math.max(this.range[2],10);
-this.range[3] = Math.max(this.range[3], this.range[2]/2);
+		this.autoscale(v);
 
 		this.targetSpeed[1] = (v>10) ? Math.round(v*100)/100 : Math.round(v*1000)/1000;
 		this.easeSpeed[1] = DEF_EASE;
@@ -154,6 +142,30 @@ this.range[3] = Math.max(this.range[3], this.range[2]/2);
 		this.context.restore();
 
 		rotation += Math.PI / 180;
+	}
+	autoscale(val) {
+		if (val < this.range[1]) return;
+		
+		let tmprange = [];
+		if (val > 500)
+			tmprange = [0, 100*DEF_SCALE[0][1], 100*DEF_SCALE[0][2], 100*DEF_SCALE[0][3]]
+		else if (val > 200)
+			tmprange = [0, 10*DEF_SCALE[2][1], 10*DEF_SCALE[2][2], 10*DEF_SCALE[2][3]]
+		else if (val > 100)
+			tmprange = [0, 10*DEF_SCALE[1][1], 10*DEF_SCALE[1][2], 10*DEF_SCALE[1][3]]
+		else if (val > 50)
+			tmprange = [0, 10*DEF_SCALE[0][1], 10*DEF_SCALE[0][2], 10*DEF_SCALE[0][3]]
+		else if (val > 20)
+			tmprange = DEF_SCALE[2];
+		else if (val > 10)
+			tmprange = DEF_SCALE[1];
+		else
+			tmprange = DEF_SCALE[0];
+
+		if (tmprange[1] > this.range[1]) {
+			this.range = tmprange;
+			this.redraw = true;
+		}
 	}
 	Update(elapsed) {
 		for (let i in this.speed) {
