@@ -125,7 +125,7 @@ class Button {
             if (this.label[1])
                 this.labelnum = (this.labelnum+1)%2;
             if (this.onClick)
-                (this.onClick)();
+                (this.onClick)(this.label[this.labelnum]);
         }
     }
     set enable (val) {
