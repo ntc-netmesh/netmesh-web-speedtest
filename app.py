@@ -19,7 +19,7 @@ async_mode = 'gevent'
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
-allowed_origin = "http://localhost:8000"
+allowed_origin = ["http://localhost:8000", "http://localhost:5000"]
 socketio = SocketIO(app, async_mode=async_mode, cors_allowed_origins=allowed_origin)
 
 thread = None
