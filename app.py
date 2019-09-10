@@ -329,7 +329,17 @@ class MyNamespace(Namespace):
         emit('my_response', {'data': 'connected'})
 
 
+class MyPingPong(Namespace):
+
+    def on_connect(self):
+        emit('pong')
+
+    def on_disconnect(self):
+        disconnect()
+
+
 socketio.on_namespace(MyNamespace('/speedtest'))
+socketio.on_namespace(MyPingPong('/pingpong'))
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', debug=True)
