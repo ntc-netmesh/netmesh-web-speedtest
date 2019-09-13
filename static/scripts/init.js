@@ -17,7 +17,7 @@ require([
 function () {
 	var socket = null;
 	// TODO: get server list from python server
-	let serverList = [{nickname:'DOST-ASTI', url:'http://localhost:5000/speedtest'},
+	let serverList = [{nickname:'DOST-ASTI', url:'http://localhost:5000'},
 					  {nickname:'ABC', url:'555.666.777.888'},
 					  {nickname:'DEF', url:'999.AAA.BBB.CCC'},
 					  {nickname:'GHI', url:'DDD.EEE.FFF.000'}];
@@ -47,7 +47,7 @@ function () {
 							colors:textColors,
 							height: 25,
 							label:'SERVER: ', offset:40,			// x-offset from label if needed
-							text:'Checking...'});
+							text:'Checking connection to server...'});
 	let serverIP = new Label({id:'serverIP',
 							rect:new Rect(340,35,400,40),
 							colors:textColors,
@@ -147,7 +147,7 @@ function () {
 		//console.log(ev);
 		let selectedServer = serverForm.selectedServer;
 		serverLabel.text = selectedServer;
-		serverIP.label = getServerUrl(selectedServer);
+//		serverIP.label = getServerUrl(selectedServer);
 		//close form
 		console.log (`Server changed to: ${serverIP.label}`);
 		serverForm.parent.removeChild(serverForm.newForm);
@@ -161,7 +161,7 @@ function () {
 	}
 	function getServerUrl(name) {
 		for (let l of serverList) {
-			if (l.nickname == name) return l.url;
+			if (l.nickname == name) return (l.url + '/speedtest');
 		}
 		return '/speedtest';
 	}
@@ -202,7 +202,7 @@ function () {
 	function connectToServer(servername) {
 		let url = getServerUrl(servername);
 		console.log(url);
-		socket = io(url);	//<- this should be new server url
+		socket = io(url, { forceNew: true });	//<- this should be new server url
 		// TODO: if unable to establish connection, drop socket
 
 		var dlBinBlob = new Uint8Array(mySettings.dlSize);
@@ -248,7 +248,6 @@ function () {
                         break;
                     }
                 }
-//                myLog(msg);
             });
 	}
 
@@ -256,26 +255,68 @@ function () {
 	try {
 		aboutButton.enable = true;
 		console.log('at connect, check server ping here')
-		// TODO: do ping-ping-ping-ping-ping
-		for (let server of serverList) {
-			console.log(`ping ${server.url}, return latency`)
-		}
-		server = serverList[0];
-		// TODO: find lowest latency, select as default server
 
-		// emulate long ping-ping-ping before socket connection established
-		setTimeout(() => {
-			serverLabel.text = serverList[0].nickname;
-			serverIP.label = getServerUrl(serverList[0].nickname);
-			goButton.enable = true;
-			multiButton.enable = true;
-			serverButton.enable = true;
-	
-			connectToServer('DOST-ASTI');
-		}, 500);
+        let promises = [];
+        for (let server of serverList) {
+            let p = new Promise((resolve, reject) => {
+                let wdt = true;
+                let tempsocket = io(server.url + '/pingpong');   // add a setTimeout delay if you want
+                let start = (new Date).getTime();
+
+                tempsocket.on('pong', (ev) => {
+                    wdt = false;
+                    promise_watchdog = false;
+                    latency = (new Date).getTime() - start;
+                    tempsocket.disconnect();
+                    resolve({s:server, l:latency});  // or resolve(ev);
+                });
+
+                setTimeout(() => {
+                    if (wdt == true) {
+                        tempsocket.disconnect();
+                        resolve(Number.MAX_VALUE); // a very large dummy value
+                   }
+               }, 2000);
+            })
+            promises.push(p);
+        }
+
+        Promise.all(promises)
+            .then(values => {
+                // process values here
+                min = Number.MAX_VALUE;  // initialize to an arbitrarily large number
+		        nearest_server = null;
+
+                for (let item of values){
+                    if (item.l <= min){
+                        nearest_server = item.s;
+                        min = item.l;
+                    }
+                }
+
+                setTimeout(() => {
+                    if (nearest_server != null){
+                        serverLabel.text = nearest_server.nickname;
+                        goButton.enable = true;
+                        multiButton.enable = true;
+                        serverButton.enable = true;
+                        connectToServer(nearest_server.nickname);
+                    }
+                    else {
+                        serverLabel.text = 'Server connection failed.'
+                        goButton.enable = false;
+                        multiButton.enable = false;
+                        serverButton.enable = false;
+                        testEnd(false, `Server connection failure. Please reload the page to try again.`);
+                    }
+                }, 1000);
+            })
+            .catch(error => { // <- optional
+                console.error(error.message)
+             });
+
 	}
 	catch(e) {
 		socket = null;
 	}
-});        
-
+});
