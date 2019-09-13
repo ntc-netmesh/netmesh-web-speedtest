@@ -9,7 +9,7 @@ import json
 import hashlib
 from math import ceil
 
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, redirect
 from flask_socketio import SocketIO, Namespace, emit, disconnect
 
 # Set this variable to "threading", "eventlet" or "gevent" to test the
@@ -122,6 +122,8 @@ def emit_result(sid):
 @app.route('/')
 def index():
     return render_template('index-pretty.html', async_mode=socketio.async_mode)
+    # for production, redirect requests to '/' to the main speedtest landing page
+    # return redirect("https://sago-gulaman.xyz/web/speedtest/", code=302)
 
 
 class MyNamespace(Namespace):
