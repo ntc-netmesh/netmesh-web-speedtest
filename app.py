@@ -36,12 +36,11 @@ def submit(request, result):
     # make POST to results server
     submit_url = "http://localhost:8000/api/submit/speedtest"
     data = {
+        "server": "dummy-uuid",
         "test_id": uuid.uuid4(),
         "sid": request.sid,
         "ip_address": request.remote_addr,
-        "rtt": result["rtt"],
-        "ul": result["ul"],
-        "dl": result["dl"],
+        "result": result
     }
     data_json = json.dumps(data, default=str)
 
@@ -149,6 +148,7 @@ class MyNamespace(Namespace):
             pass
 
     def on_connect(self):
+        print('Client connected %s' % request.sid)
         msg = {
             'log': 'Connected',
             'state': 0,
@@ -315,7 +315,7 @@ class MyNamespace(Namespace):
         }
         emit('my_response', msg)
         print(db)
-        # submit(request, results)  # ToDO: handle when connection takes too long or RS is unreachable?
+        submit(request, db[request.sid]['result'])  # ToDO: handle when connection takes too long or RS is unreachable?
 
     def on_error(self):
         print(request.event["message"])
