@@ -71,7 +71,7 @@ def get_dl_speed(sid):
     dlTimes = db[sid]['dlTimes']
     # dlTimes = drop_outliers(dlTimes)
     dlTimesAve = sum(dlTimes) / len(dlTimes)
-    dlSpeed = db[sid]['settings']['dlSize'] / (dlTimesAve - db[sid]['oneWayTime'])
+    dlSpeed = (db[sid]['settings']['dlSize'] * 8) / (dlTimesAve - db[sid]['oneWayTime'])
     return dlSpeed
 
 
@@ -79,7 +79,7 @@ def get_ul_speed(sid):
     ulTimes = db[sid]['ulTimes']
     # ulTimes = drop_outliers(ulTimes)
     ulTimesAve = sum(ulTimes) / len(ulTimes)
-    ulSpeed = db[sid]['settings']['ulSize'] / (ulTimesAve - db[sid]['oneWayTime'])
+    ulSpeed = (db[sid]['settings']['ulSize'] * 8) / (ulTimesAve - db[sid]['oneWayTime'])
     return ulSpeed
 
 
