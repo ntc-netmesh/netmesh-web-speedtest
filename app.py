@@ -39,7 +39,7 @@ def submit(request, result):
         "server": "dummy-uuid",
         "test_id": uuid.uuid4(),
         "sid": request.sid,
-        "ip_address": request.remote_addr,
+        "ip_address": request.environ['HTTP_X_FORWARDED_FOR'],
         "result": result
     }
     data_json = json.dumps(data, default=str)
