@@ -18,8 +18,8 @@ from flask_socketio import SocketIO, Namespace, emit, disconnect
 async_mode = 'gevent'
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'secret!'
-allowed_origin = ["http://localhost:8000", "http://localhost:5000"]
+app.config.from_pyfile('nm-dev.cfg')
+allowed_origin = app.config['ALLOWED_ORIGINS']
 socketio = SocketIO(app, async_mode=async_mode, cors_allowed_origins=allowed_origin)
 
 thread = None
