@@ -34,13 +34,13 @@ def remove_sid(sid):
 
 def submit(request, result):
     # make POST to results server
-    submit_url = "http://localhost:8000/api/submit/speedtest"
+    submit_url = app.config['RESULTS_SERVER_URL']
     try:
         client_ip = request.environ['HTTP_X_FORWARDED_FOR']
     except:
         client_ip = request.remote_addr
     data = {
-        "server": "dummy-uuid",
+        "server": app.config['SERVER_UUID'],
         "test_id": uuid.uuid4(),
         "sid": request.sid,
         "ip_address": client_ip,
