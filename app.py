@@ -20,8 +20,15 @@ async_mode = 'gevent'
 app = Flask(__name__)
 app.config.from_pyfile('nm-dev.cfg')
 allowed_origin = app.config['ALLOWED_ORIGINS']
-socketio = SocketIO(app, async_mode=async_mode, cors_allowed_origins=allowed_origin)
-
+params = {
+    'ping_timeout': 300000,  # 5mins
+    'ping_interval': 60000   # 1min
+}
+socketio = SocketIO(app,
+                    async_mode=async_mode,
+                    cors_allowed_origins=allowed_origin,
+                    async_handlers=True,
+                    **params)
 thread = None
 thread_lock = Lock()
 
