@@ -220,7 +220,7 @@ class MyNamespace(Namespace):
         else:
             # send result first
             [db[request.sid]['result']['rttAve'], db[request.sid]['result']['rttMin'],
-             db[request.sid]['result']['rttMax']] = get_rtt(db[request.sid]['pingTimes'])
+             db[request.sid]['result']['rttMax']] = get_rtt(drop_outliers(db[request.sid]['pingTimes']))
             db[request.sid]['oneWayTime'] = db[request.sid]['result']['rttAve'] / 2
             msg = {
                 'log': 'Partial Results sent',
