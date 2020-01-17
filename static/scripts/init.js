@@ -238,9 +238,11 @@ function () {
                     }
                     case 101: { // Test
                         testEnd(true, msg='Test has completed!');
+                        socket.disconnect();
                         break;
                     }
                     case -99: {  // Error State
+                        testEnd(true, msg="Test error. ")
                         break;
                     }
                     default:{  // fallback for all other events
