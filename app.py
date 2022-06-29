@@ -252,7 +252,7 @@ class MyNamespace(Namespace):
 
         # check if hash is correct
         # If client failed to give correct hash, server triggers disconnect
-        if message['hash'] != db[request.sid]['digest']:
+        if bytes(message['hash']) != db[request.sid]['digest']:
             msg = {
                 'state': -99,
                 'log': 'Verification failed!',
@@ -294,7 +294,7 @@ class MyNamespace(Namespace):
 
     def received_UL(self, message, clockStopped):
         db[request.sid]['ulTimes'].append(clockStopped - db[request.sid]['ulStart'])
-        recvBinData = message['bin']
+        recvBinData = bytes(message['bin'])
 
         # validate payload
         if db[request.sid]['digest'] != hashlib.sha512(recvBinData).hexdigest():
